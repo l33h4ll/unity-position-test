@@ -1,47 +1,74 @@
+using System;
+using System.Collections;
 using System.Linq;
+using UnityEngine;
+using Zenject;
 
 namespace Project.UI
 {
-    public class GameManager
+    public static class Symbols {
+        public const string Rock = "rock";
+        public const string Paper = "paper";
+        public const string Scissors = "scissors";
+        public const string Question = "question_mark";
+    }
+
+    public static class GameResult
     {
-        private readonly PlayerSymbolPresenter _playerSymbolPresenter;
-        private readonly OpponentInputPresenter _opponentInputPresenter;
-        private readonly OpponentSymbolPresenter _opponentSymbolPresenter;
-        private readonly CountdownPresenter _countdownPresenter;
-        private readonly ResultTextPresenter _resultTextPresenter;
+        public const string PlayerWins = "Player Wins!";
+        public const string OpponentWins = "AI Wins!";
+        public const string Tie = "Tie!";
+    }
+    
+    public class GameManager : MonoBehaviour
+    {
+        private PlayerInputPresenter _playerInputPresenter;
+        private PlayerSymbolPresenter _playerSymbolPresenter;
+        private OpponentInputPresenter _opponentInputPresenter;
+        private OpponentSymbolPresenter _opponentSymbolPresenter;
+        private CountdownPresenter _countdownPresenter;
+        private ResultTextPresenter _resultTextPresenter;
+
+
+        private float RevelTimeInSeconds => 0.5f;
+        private float GameResetTimeInSeconds => 5f;
 
         enum GameState
         {
+            GameStart,
             PlayerTurn,
             OpponentTurn,
-            ShowResults,
-            EndGame
+            RevealWinner
         };
 
         private GameState gameState;
 
         private string playerEntry;
-        private string opponentEntry;        
-        private string[] validEntries = new string[] { "rock", "paper", "scissors" };
+        private string opponentEntry;
 
-        public GameManager(
-                PlayerSymbolPresenter playerSymbolPresenter,
-                OpponentInputPresenter opponentInputPresenter,
-                OpponentSymbolPresenter opponentSymbolPresenter,
-                CountdownPresenter countdownPresenter,
-                ResultTextPresenter resultTextPresenter)
-        {            
+        private string[] validEntries = new string[] { Symbols.Rock, Symbols.Paper, Symbols.Scissors };
+
+        [Inject]
+        public void Constructor(
+            PlayerInputPresenter playerInputPresenter,
+            PlayerSymbolPresenter playerSymbolPresenter,
+            OpponentInputPresenter opponentInputPresenter,
+            OpponentSymbolPresenter opponentSymbolPresenter,
+            CountdownPresenter countdownPresenter,
+            ResultTextPresenter resultTextPresenter)
+        {
+            _playerInputPresenter = playerInputPresenter;
             _playerSymbolPresenter = playerSymbolPresenter;
             _opponentInputPresenter = opponentInputPresenter;
             _opponentSymbolPresenter = opponentSymbolPresenter;
-            _countdownPresenter = countdownPresenter;            
+            _countdownPresenter = countdownPresenter;
             _resultTextPresenter = resultTextPresenter;
 
+            _playerInputPresenter.OnSubmit += OnPlayerEntryEntered;
             _countdownPresenter.OnTimeUp += OnOpponentTimeUp;
 
-            SetState(GameState.PlayerTurn);
+            SetState(GameState.GameStart);
         }
-
 
         private void SetState(GameState state)
         {
@@ -49,12 +76,16 @@ namespace Project.UI
 
             switch (gameState)
             {
+                case GameState.GameStart:
+                    OnNewGame();
+                break;
+       
                 case GameState.OpponentTurn:
                     OnOpponentTurn();
                 break;
 
-                case GameState.ShowResults:
-                    // TODO: Update UI with player and opptonents selected symbols
+                case GameState.RevealWinner:
+                    OnRevealWinner();
                 break;
 
                 default:
@@ -62,11 +93,17 @@ namespace Project.UI
             }
         }
 
+        private void OnNewGame()
+        {
+            _resultTextPresenter.HideResult();
+            _countdownPresenter.Hide();
+            _playerInputPresenter.Reset();
+            _playerSymbolPresenter.SetImage(GetSymbolImage(Symbols.Question));
+            _opponentInputPresenter.Reset();
+            _opponentSymbolPresenter.SetImage(GetSymbolImage(Symbols.Question));
+            SetState(GameState.PlayerTurn);
+        }
 
-        /// <summary>
-        /// Event handler for player enters their selected symbol
-        /// </summary>
-        /// <param name="entry">Entered symbol</param>
         public void OnPlayerEntryEntered(string entry)
         {
             if (gameState != GameState.PlayerTurn)
@@ -75,14 +112,11 @@ namespace Project.UI
             if (ValidateEntry(entry))
             {
                 playerEntry = entry;
+                _playerInputPresenter.DisableInput();
                 SetState(GameState.OpponentTurn);
             }
         }
 
-        /// <summary>
-        /// Event handler for when opponent enters their selected symbol
-        /// </summary>
-        /// <param name="entry">Entered symbol</param>
         public void OnOpponentEntryEntered(string entry)
         {
             if (gameState != GameState.OpponentTurn)
@@ -91,8 +125,8 @@ namespace Project.UI
             if (ValidateEntry(entry))
             {
                 opponentEntry = entry;
-                SetState(GameState.ShowResults);
-            }            
+                SetState(GameState.RevealWinner);
+            }
         }
 
         private bool ValidateEntry(string entry)
@@ -100,23 +134,84 @@ namespace Project.UI
             return string.IsNullOrWhiteSpace(entry) == false && validEntries.Contains(entry.ToLower());
         }
 
-        /// <summary>
-        /// Event handler for when its the opponents turn
-        /// </summary>
         private void OnOpponentTurn()
         {
             _countdownPresenter.StartTimer();
             _opponentInputPresenter.SelectSymbol();
         }
 
-        /// <summary>
-        /// Evemt handler for when opponents turn time has run out
-        /// </summary>
         private void OnOpponentTimeUp()
         {
             OnOpponentEntryEntered(_opponentInputPresenter.GetSelectedSymbol());
         }
 
-    }
+        private void OnRevealWinner()
+        {
+            Sprite playerSelectedSymbol = GetSymbolImage(playerEntry);
+            Sprite opponentSelectedSymbol= GetSymbolImage(opponentEntry);
 
+            if (playerSelectedSymbol != null)
+            {
+                _playerSymbolPresenter.SetImage(playerSelectedSymbol);
+            }
+
+            if (opponentSelectedSymbol != null)
+            {
+                _opponentSymbolPresenter.SetImage(opponentSelectedSymbol);
+            }
+            
+            StartCoroutine(RevelSelections(RevelTimeInSeconds));
+
+            StartCoroutine(RestartGame(GameResetTimeInSeconds));
+        }
+
+        private IEnumerator RevelSelections(float delayInSeconds)
+        {
+            yield return new WaitForSeconds(delayInSeconds);
+
+            _resultTextPresenter.ShowResult(GetWinner(playerEntry, opponentEntry));
+        }
+
+        private IEnumerator RestartGame(float delayInSeconds)
+        {
+            yield return new WaitForSeconds(delayInSeconds);
+
+            SetState(GameState.GameStart);
+        }
+
+        private string GetWinner(string player, string opponent)
+        {
+            if (player == opponent)
+            {
+                return GameResult.Tie;
+            }
+            
+            if (player == Symbols.Rock && opponent == Symbols.Scissors ||
+                player == Symbols.Scissors && opponent == Symbols.Paper || 
+                player == Symbols.Paper && opponent == Symbols.Rock)
+            {
+                return GameResult.PlayerWins;
+            }
+            else
+            {
+                return GameResult.OpponentWins;
+            }
+        }
+
+        private Sprite GetSymbolImage(string name)
+        {
+            Sprite symbolImage = null;
+
+            try
+            {
+                symbolImage = Resources.Load<Sprite>(name);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+
+            return symbolImage;
+        }
+    }
 }

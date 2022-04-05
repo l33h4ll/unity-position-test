@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using System;
 using TMPro;
 
 namespace Project.UI
@@ -7,23 +8,32 @@ namespace Project.UI
     public sealed class PlayerInputPresenter
     {
         private readonly TMP_InputField _playerInput;
-        private readonly GameManager _gameManager;
 
-        public PlayerInputPresenter(TMP_InputField field, GameManager gameManager)
+        public event Action<string> OnSubmit;
+
+        public PlayerInputPresenter(TMP_InputField field)
         {
             _playerInput = field;
-            _gameManager = gameManager;
-
-            _playerInput.onSubmit.AddListener(SubmitEntry);
+            _playerInput.onSubmit.AddListener(OnSubmitListener);
         }
 
-        /// <summary>
-        /// Event handler for when player enters their symbol selection
-        /// </summary>
-        /// <param name="entry">Entered symbol</param>
-        private void SubmitEntry(string entry)
-        {            
-            _gameManager.OnPlayerEntryEntered(entry);
-        }                
+        public void Reset()
+        {
+            _playerInput.text = "";
+            _playerInput.enabled = true;
+        }
+
+        public void DisableInput()
+        {
+            _playerInput.enabled = false;
+        }
+
+        private void OnSubmitListener(string text)
+        {           
+            if (OnSubmit != null)
+            {
+                OnSubmit(text);
+            }
+        }
     }
 }

@@ -5,8 +5,15 @@ namespace Project.UI
 {
     public abstract class SymbolPresenter
     {
+        protected readonly Image _image;
         protected SymbolPresenter(Image image)
         {
+            _image = image;
+        }
+
+        public void SetImage(UnityEngine.Sprite sprite)
+        {
+            _image.sprite = sprite;
         }
     }
 
@@ -15,6 +22,7 @@ namespace Project.UI
     {
         public PlayerSymbolPresenter(Image image) : base(image)
         {
+            
         }
     }
 
@@ -23,6 +31,7 @@ namespace Project.UI
     {
         public OpponentSymbolPresenter(Image image) : base(image)
         {
+
         }
     }
 }

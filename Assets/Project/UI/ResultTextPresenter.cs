@@ -12,5 +12,16 @@ namespace Project.UI
         {
             _resultText = text;
         }
+
+        public void ShowResult(string result)
+        {
+            _resultText.text = result;
+            _resultText.gameObject.SetActive(true);
+        }
+
+        public void HideResult()
+        {
+            _resultText.gameObject.SetActive(false);
+        }
     }
 }
