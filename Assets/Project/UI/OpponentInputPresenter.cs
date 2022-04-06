@@ -51,6 +51,10 @@ namespace Project.UI
             {
                 Debug.Log("Opponent GetRandomSelection timed out");
             }
+            catch(Exception ex)
+            {
+                Debug.LogException(ex);
+            }
 
             return -1;
         }

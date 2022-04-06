@@ -122,11 +122,8 @@ namespace Project.UI
             if (gameState != GameState.OpponentTurn)
                 return;
 
-            if (ValidateEntry(entry))
-            {
-                opponentEntry = entry;
-                SetState(GameState.RevealWinner);
-            }
+            opponentEntry = entry;
+            SetState(GameState.RevealWinner);
         }
 
         private bool ValidateEntry(string entry)
@@ -188,7 +185,8 @@ namespace Project.UI
             
             if (player == Symbols.Rock && opponent == Symbols.Scissors ||
                 player == Symbols.Scissors && opponent == Symbols.Paper || 
-                player == Symbols.Paper && opponent == Symbols.Rock)
+                player == Symbols.Paper && opponent == Symbols.Rock || 
+                string.IsNullOrEmpty(opponent))
             {
                 return GameResult.PlayerWins;
             }
