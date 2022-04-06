@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Linq;
+using UniRx;
 using UnityEngine;
 using Zenject;
 
@@ -156,23 +156,21 @@ namespace Project.UI
             {
                 _opponentSymbolPresenter.SetImage(opponentSelectedSymbol);
             }
-            
-            StartCoroutine(RevelSelections(RevelTimeInSeconds));
 
-            StartCoroutine(RestartGame(GameResetTimeInSeconds));
+
+            Observable.Timer(TimeSpan.FromSeconds(RevelTimeInSeconds)).Subscribe(_ => RevelSelections());
+
+            Observable.Timer(TimeSpan.FromSeconds(GameResetTimeInSeconds)).Subscribe(_ => RestartGame());
         }
 
-        private IEnumerator RevelSelections(float delayInSeconds)
-        {
-            yield return new WaitForSeconds(delayInSeconds);
 
+        private void RevelSelections()
+        {
             _resultTextPresenter.ShowResult(GetWinner(playerEntry, opponentEntry));
         }
 
-        private IEnumerator RestartGame(float delayInSeconds)
+        private void RestartGame()
         {
-            yield return new WaitForSeconds(delayInSeconds);
-
             SetState(GameState.GameStart);
         }
 
