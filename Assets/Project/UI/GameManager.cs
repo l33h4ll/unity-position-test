@@ -6,20 +6,75 @@ using Zenject;
 
 namespace Project.UI
 {
-    public static class Symbols {
-        public const string Rock = "rock";
-        public const string Paper = "paper";
-        public const string Scissors = "scissors";
-        public const string Question = "question_mark";
-    }
-
     public static class GameResult
     {
         public const string PlayerWins = "Player Wins!";
         public const string OpponentWins = "AI Wins!";
         public const string Tie = "Tie!";
     }
-    
+
+    public static class Symbol
+    {
+        public const string Rock = "rock";
+        public const string Paper = "paper";
+        public const string Scissors = "scissors";
+        public const string Question = "question_mark";
+
+        public static Sprite GetSymbolImage(string name)
+        {
+            Sprite symbolImage = null;
+
+            try
+            {
+                symbolImage = Resources.Load<Sprite>(name);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+
+            return symbolImage;
+        }
+
+        public static bool AreEqual(string symbolA, string symbolB)
+        {
+            return symbolA == symbolB;
+        }
+
+        public static bool IsGreater(string symbolA, string symbolB)
+        {
+            return symbolA == Symbol.Rock && symbolB == Symbol.Scissors || 
+                   symbolA == Symbol.Scissors && symbolB == Symbol.Paper ||
+                   symbolA == Symbol.Paper && symbolB == Symbol.Rock;
+        }
+
+        public static string GetWinner(string playerSymbol, string opponentSymbol)
+        {
+            if (AreEqual(playerSymbol, opponentSymbol))
+            {
+                return GameResult.Tie;
+            }
+
+            if (string.IsNullOrEmpty(opponentSymbol))
+            {
+                return GameResult.PlayerWins;
+            }
+
+            return IsGreater(playerSymbol, opponentSymbol) ? GameResult.PlayerWins : GameResult.OpponentWins;
+        }
+
+        public static bool IsValid(string symbol)
+        {
+            return string.IsNullOrWhiteSpace(symbol) == false &&
+                GetSymbols().Contains(symbol.ToLower().Trim());
+        }
+
+        public static string[] GetSymbols()
+        {
+            return new string[] { Symbol.Rock, Symbol.Paper, Symbol.Scissors };
+        }
+    }
+
     public class GameManager : MonoBehaviour
     {
         private PlayerInputPresenter _playerInputPresenter;
@@ -28,7 +83,6 @@ namespace Project.UI
         private OpponentSymbolPresenter _opponentSymbolPresenter;
         private CountdownPresenter _countdownPresenter;
         private ResultTextPresenter _resultTextPresenter;
-
 
         private float RevelTimeInSeconds => 0.5f;
         private float GameResetTimeInSeconds => 5f;
@@ -45,8 +99,6 @@ namespace Project.UI
 
         private string playerEntry;
         private string opponentEntry;
-
-        private string[] validEntries = new string[] { Symbols.Rock, Symbols.Paper, Symbols.Scissors };
 
         [Inject]
         public void Constructor(
@@ -98,9 +150,9 @@ namespace Project.UI
             _resultTextPresenter.HideResult();
             _countdownPresenter.Hide();
             _playerInputPresenter.Reset();
-            _playerSymbolPresenter.SetImage(GetSymbolImage(Symbols.Question));
+            _playerSymbolPresenter.SetImage(Symbol.GetSymbolImage(Symbol.Question));
             _opponentInputPresenter.Reset();
-            _opponentSymbolPresenter.SetImage(GetSymbolImage(Symbols.Question));
+            _opponentSymbolPresenter.SetImage(Symbol.GetSymbolImage(Symbol.Question));
             SetState(GameState.PlayerTurn);
         }
 
@@ -109,7 +161,7 @@ namespace Project.UI
             if (gameState != GameState.PlayerTurn)
                 return;
 
-            if (ValidateEntry(entry))
+            if (Symbol.IsValid(entry))
             {
                 playerEntry = entry;
                 _playerInputPresenter.DisableInput();
@@ -126,11 +178,6 @@ namespace Project.UI
             SetState(GameState.RevealWinner);
         }
 
-        private bool ValidateEntry(string entry)
-        {
-            return string.IsNullOrWhiteSpace(entry) == false && validEntries.Contains(entry.ToLower());
-        }
-
         private void OnOpponentTurn()
         {
             _countdownPresenter.StartTimer();
@@ -144,8 +191,8 @@ namespace Project.UI
 
         private void OnRevealWinner()
         {
-            Sprite playerSelectedSymbol = GetSymbolImage(playerEntry);
-            Sprite opponentSelectedSymbol= GetSymbolImage(opponentEntry);
+            Sprite playerSelectedSymbol = Symbol.GetSymbolImage(playerEntry);
+            Sprite opponentSelectedSymbol= Symbol.GetSymbolImage(opponentEntry);
 
             if (playerSelectedSymbol != null)
             {
@@ -157,57 +204,19 @@ namespace Project.UI
                 _opponentSymbolPresenter.SetImage(opponentSelectedSymbol);
             }
 
-
             Observable.Timer(TimeSpan.FromSeconds(RevelTimeInSeconds)).Subscribe(_ => RevelSelections());
 
             Observable.Timer(TimeSpan.FromSeconds(GameResetTimeInSeconds)).Subscribe(_ => RestartGame());
         }
 
-
         private void RevelSelections()
-        {
-            _resultTextPresenter.ShowResult(GetWinner(playerEntry, opponentEntry));
+        {                       
+            _resultTextPresenter.ShowResult(Symbol.GetWinner(playerEntry, opponentEntry));
         }
 
         private void RestartGame()
         {
             SetState(GameState.GameStart);
-        }
-
-        private string GetWinner(string player, string opponent)
-        {
-            if (player == opponent)
-            {
-                return GameResult.Tie;
-            }
-            
-            if (player == Symbols.Rock && opponent == Symbols.Scissors ||
-                player == Symbols.Scissors && opponent == Symbols.Paper || 
-                player == Symbols.Paper && opponent == Symbols.Rock || 
-                string.IsNullOrEmpty(opponent))
-            {
-                return GameResult.PlayerWins;
-            }
-            else
-            {
-                return GameResult.OpponentWins;
-            }
-        }
-
-        private Sprite GetSymbolImage(string name)
-        {
-            Sprite symbolImage = null;
-
-            try
-            {
-                symbolImage = Resources.Load<Sprite>(name);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-            }
-
-            return symbolImage;
         }
     }
 }

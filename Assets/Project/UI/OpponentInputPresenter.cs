@@ -14,8 +14,7 @@ namespace Project.UI
 
         public async void SelectSymbol()
         {
-            string[] symbols = new[] { Symbols.Rock, Symbols.Paper, Symbols.Scissors };
-
+            var symbols = Symbol.GetSymbols();
             int selection = await GetRandomSelection(0, symbols.Length -1);
 
             _selectedSymbol = selection >= 0 ? symbols[selection] : "";
@@ -31,7 +30,7 @@ namespace Project.UI
             return _selectedSymbol;
         }
 
-        private async UniTask<int> GetRandomSelection(int min, int max)
+        public async UniTask<int> GetRandomSelection(int min, int max)
         {
             var cts = new CancellationTokenSource();
             cts.CancelAfterSlim(TimeSpan.FromSeconds(3));
