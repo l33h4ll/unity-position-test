@@ -56,7 +56,8 @@ namespace Project.UI
                 Debug.LogException(ex);
             }
 
-            return -1;
+            // Fall back to random number generation if failed to get random number number
+            return UnityEngine.Random.Range(min, max + 1);
         }
     }
 }
